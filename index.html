@@ -1,0 +1,1645 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+<title>Bahçe Defterim</title>
+<meta name="theme-color" content="#1FA35B" />
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Work+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap');
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body { font-family: 'Work Sans', sans-serif; -webkit-tap-highlight-color: transparent; }
+.hide-scrollbar::-webkit-scrollbar { display: none; }
+*:focus-visible { outline: 2px solid #1FA35B; outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+}
+select {
+  -webkit-appearance: none; appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%235C6B5E' stroke-width='1.5' fill='none' fill-rule='evenodd'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px;
+}
+input, textarea, select, button { font-family: inherit; }
+input[type="date"] { color-scheme: light; }
+button { cursor: pointer; }
+.spin { animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" data-presets="react,env" data-plugins="transform-class-properties">
+const { useState, useEffect, useMemo, useRef } = React;
+
+/* ------------------------------------------------------------------ */
+/*  Icons — small inline SVGs, no external icon library needed         */
+/* ------------------------------------------------------------------ */
+
+function IconBase({ children, size, color, style, className }) {
+  return (
+    <svg width={size || 20} height={size || 20} viewBox="0 0 24 24" fill="none" stroke={color || "currentColor"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style} className={className}>
+      {children}
+    </svg>
+  );
+}
+function IconPlus(props) { return <IconBase {...props}><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></IconBase>; }
+function IconX(props) { return <IconBase {...props}><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></IconBase>; }
+function IconArrowLeft(props) { return <IconBase {...props}><line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" /></IconBase>; }
+function IconChevronLeft(props) { return <IconBase {...props}><polyline points="15 18 9 12 15 6" /></IconBase>; }
+function IconChevronRight(props) { return <IconBase {...props}><polyline points="9 18 15 12 9 6" /></IconBase>; }
+function IconSearch(props) { return <IconBase {...props}><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></IconBase>; }
+function IconTrash(props) { return <IconBase {...props}><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></IconBase>; }
+function IconPencil(props) { return <IconBase {...props}><path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" /></IconBase>; }
+function IconLoader(props) {
+  const cls = "spin " + (props.className || "");
+  return (
+    <IconBase {...props} className={cls}>
+      <line x1="12" y1="2" x2="12" y2="6" /><line x1="12" y1="18" x2="12" y2="22" />
+      <line x1="4.93" y1="4.93" x2="7.76" y2="7.76" /><line x1="16.24" y1="16.24" x2="19.07" y2="19.07" />
+      <line x1="2" y1="12" x2="6" y2="12" /><line x1="18" y1="12" x2="22" y2="12" />
+      <line x1="4.93" y1="19.07" x2="7.76" y2="16.24" /><line x1="16.24" y1="7.76" x2="19.07" y2="4.93" />
+    </IconBase>
+  );
+}
+function IconShield(props) { return <IconBase {...props}><path d="M12 2 4 5v6c0 5.5 3.5 9.7 8 11 4.5-1.3 8-5.5 8-11V5l-8-3Z" /></IconBase>; }
+function IconLogOut(props) { return <IconBase {...props}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></IconBase>; }
+function IconUser(props) { return <IconBase {...props}><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></IconBase>; }
+
+/* ------------------------------------------------------------------ */
+/*  Design tokens                                                      */
+/* ------------------------------------------------------------------ */
+
+const COLORS = {
+  desk: "#16241B",
+  bg: "#F6F9F3",
+  bgAlt: "#E9F1E3",
+  white: "#FFFFFF",
+  ink: "#132018",
+  inkSoft: "#5C6B5E",
+  olive: "#1FA35B",
+  oliveDeep: "#0F7A40",
+  gold: "#F0663D",
+  goldSoft: "#FCE3D9",
+  clay: "#E4392B",
+  claySoft: "#FBDAD6",
+  water: "#2E93D6",
+  waterSoft: "#D8ECF9",
+  brown: "#96613D",
+  tan: "#C4903F",
+  line: "#DEEAD7",
+};
+const FONT_DISPLAY = "'Fraunces', serif";
+const FONT_BODY = "'Work Sans', sans-serif";
+const FONT_MONO = "'IBM Plex Mono', monospace";
+
+/* ------------------------------------------------------------------ */
+/*  Date / format helpers                                              */
+/* ------------------------------------------------------------------ */
+
+function isoToday() {
+  const d = new Date();
+  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+}
+function isoAddDays(iso, days) {
+  const p = iso.split("-").map(Number);
+  const dt = new Date(Date.UTC(p[0], p[1] - 1, p[2]));
+  dt.setUTCDate(dt.getUTCDate() + days);
+  return dt.getUTCFullYear() + "-" + String(dt.getUTCMonth() + 1).padStart(2, "0") + "-" + String(dt.getUTCDate()).padStart(2, "0");
+}
+function isoDiffDays(isoA, isoB) {
+  const a = isoA.split("-").map(Number);
+  const b = isoB.split("-").map(Number);
+  const ta = Date.UTC(a[0], a[1] - 1, a[2]);
+  const tb = Date.UTC(b[0], b[1] - 1, b[2]);
+  return Math.round((ta - tb) / 86400000);
+}
+function formatDateTR(iso) {
+  if (!iso) return "";
+  const p = iso.split("-");
+  if (p.length !== 3) return iso;
+  return p[2] + "." + p[1] + "." + p[0];
+}
+function getDueStatus(lastDateIso, intervalDays) {
+  if (!lastDateIso || !intervalDays) return null;
+  const dueDateIso = isoAddDays(lastDateIso, intervalDays);
+  const diff = isoDiffDays(dueDateIso, isoToday());
+  return { dueDateIso: dueDateIso, diffDays: diff, overdue: diff < 0, dueToday: diff === 0 };
+}
+function formatArea(m2) {
+  const safeM2 = Number(m2) || 0;
+  const m2Str = Math.round(safeM2).toLocaleString("tr-TR") + " m²";
+  if (safeM2 >= 100) {
+    const donum = safeM2 / 1000;
+    const donumStr = donum.toLocaleString("tr-TR", { maximumFractionDigits: 2 }) + " dönüm";
+    return m2Str + " (" + donumStr + ")";
+  }
+  return m2Str;
+}
+function isoOfYMD(y, m, d) {
+  return y + "-" + String(m + 1).padStart(2, "0") + "-" + String(d).padStart(2, "0");
+}
+
+/* ------------------------------------------------------------------ */
+/*  Reference data                                                     */
+/* ------------------------------------------------------------------ */
+
+const CATEGORIES = [
+  { key: "sebze", label: "Sebze", icon: "🥬", color: COLORS.olive },
+  { key: "meyve", label: "Meyve", icon: "🍎", color: COLORS.gold },
+  { key: "tahil", label: "Tahıl / Endüstri", icon: "🌾", color: COLORS.water },
+  { key: "diger", label: "Diğer", icon: "⚪", color: COLORS.inkSoft },
+];
+
+const LOG_TYPES = [
+  { key: "sulama", label: "Sulama", icon: "💧", color: COLORS.water, detailLabel: null, detailPlaceholder: null },
+  { key: "dikim", label: "Dikim", icon: "🌱", color: COLORS.olive, detailLabel: "Çeşit / fide bilgisi", detailPlaceholder: "Örn. Rio Grande tohumu, aşılı fidan" },
+  { key: "gubreleme", label: "Gübreleme", icon: "🧪", color: COLORS.gold, detailLabel: "Gübre türü / markası", detailPlaceholder: "Örn. NPK 15-15-15, yanmış ahır gübresi" },
+  { key: "hasat", label: "Hasat", icon: "📦", color: COLORS.clay, detailLabel: null, detailPlaceholder: null },
+  { key: "budama", label: "Budama", icon: "✂️", color: COLORS.oliveDeep, detailLabel: "Budama türü", detailPlaceholder: "Örn. Şekil budaması, kuru dal temizliği" },
+  { key: "ilaclama", label: "İlaçlama", icon: "🐛", color: COLORS.brown, detailLabel: "İlaç adı / markası", detailPlaceholder: "Örn. Bakırlı fungisit - marka adı" },
+  { key: "capalama", label: "Çapalama", icon: "⛏️", color: COLORS.tan, detailLabel: null, detailPlaceholder: null },
+  { key: "diger", label: "Diğer", icon: "🔧", color: COLORS.inkSoft, detailLabel: null, detailPlaceholder: null },
+];
+
+const WEEKDAY_LABELS = ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"];
+
+/* ------------------------------------------------------------------ */
+/*  Crop care reference data                                           */
+/* ------------------------------------------------------------------ */
+
+const CROPS = {
+  sebze: [
+    { key: "domates", label: "Domates", icon: "🍅", wateringDays: 4, fertilizingDays: 20, season: "Mart–Nisan (tohum), Mayıs (fide)", tip: "İlk meyveler görülene kadar az sulayın; meyve bağladıktan sonra düzenli su verin." },
+    { key: "biber", label: "Biber", icon: "🫑", wateringDays: 8, fertilizingDays: 20, season: "Mart–Nisan (tohum), Mayıs (fide)", tip: "Çiçeklenme döneminde susuz bırakmayın, verim ve kaliteyi doğrudan etkiler." },
+    { key: "patlican", label: "Patlıcan", icon: "🍆", wateringDays: 3, fertilizingDays: 20, season: "Mart–Nisan (tohum), Mayıs (fide)", tip: "Meyve bağladıktan sonra sık su ister, sıcak günlerde günlük sulama gerekebilir." },
+    { key: "salatalik", label: "Salatalık", icon: "🥒", wateringDays: 3, fertilizingDays: 22, season: "Nisan–Mayıs (tohum), Haziran (fide)", tip: "Düzensiz sulama meyvelerde şekil bozukluğuna ve acılaşmaya yol açar." },
+    { key: "kabak", label: "Kabak", icon: "🎃", wateringDays: 4, fertilizingDays: 20, season: "Nisan–Mayıs", tip: "Kuraklığa nispeten dayanıklıdır ama meyve döneminde suyu aksatmayın." },
+    { key: "marul", label: "Marul", icon: "🥬", wateringDays: 3, fertilizingDays: 20, season: "Şubat–Mart, Eylül", tip: "Yüzlek köklüdür; toprağın üst yüzeyini sürekli nemli tutun." },
+    { key: "ispanak", label: "Ispanak", icon: "🥬", wateringDays: 5, fertilizingDays: 20, season: "Eylül–Ekim, Şubat–Mart", tip: "Serin havayı sever, toprak neminin dengeli olmasına dikkat edin." },
+    { key: "lahana", label: "Lahana", icon: "🥬", wateringDays: 5, fertilizingDays: 20, season: "Mart, Temmuz–Ağustos", tip: "Baş oluşum döneminde nem eksikliği başların küçük kalmasına yol açar." },
+    { key: "havuc", label: "Havuç", icon: "🥕", wateringDays: 10, fertilizingDays: 25, season: "Mart–Nisan, Temmuz (kışlık)", tip: "İlk gelişimde sık, kökler kalınlaştıkça seyrek ama derin sulayın." },
+    { key: "sogan", label: "Soğan", icon: "🧅", wateringDays: 7, fertilizingDays: 25, season: "Şubat–Mart (yazlık), Ekim–Kasım (kışlık)", tip: "Hasada yakın dönemde sulamayı azaltmak depolama kalitesini arttırır." },
+    { key: "sarimsak", label: "Sarımsak", icon: "🧄", wateringDays: 10, fertilizingDays: 30, season: "Ekim–Kasım", tip: "Kış boyunca az su ister; ilkbaharda gelişme hızlanınca sulamayı arttırın." },
+    { key: "patates", label: "Patates", icon: "🥔", wateringDays: 7, fertilizingDays: 25, season: "Mart–Nisan", tip: "Yumru bağlama döneminde düzenli sulama verimi doğrudan etkiler." },
+    { key: "fasulye", label: "Fasulye", icon: "🫘", wateringDays: 17, fertilizingDays: 25, season: "Nisan–Mayıs", tip: "Çiçeklenmeden önce ve sonra olmak üzere düzenli aralıklarla sulayın." },
+    { key: "bezelye", label: "Bezelye", icon: "🫛", wateringDays: 8, fertilizingDays: 25, season: "Şubat–Mart, Ekim (kışlık)", tip: "Serin iklimi sever, toprağın kurumasına izin vermeyin." },
+    { key: "bamya", label: "Bamya", icon: "🌱", wateringDays: 5, fertilizingDays: 22, season: "Nisan–Mayıs", tip: "Sıcak ve kurak havalarda sulama aralığını kısaltın." },
+    { key: "pirasa", label: "Pırasa", icon: "🥬", wateringDays: 7, fertilizingDays: 25, season: "Temmuz–Ağustos (fide)", tip: "Uzun gelişme dönemi boyunca toprağın nemli kalmasına özen gösterin." },
+    { key: "karnabahar", label: "Karnabahar", icon: "🥦", wateringDays: 5, fertilizingDays: 20, season: "Mart, Temmuz–Ağustos", tip: "Baş bağlama döneminde susuz kalmamalı." },
+    { key: "brokoli", label: "Brokoli", icon: "🥦", wateringDays: 5, fertilizingDays: 20, season: "Mart, Ağustos", tip: "Düzenli ve orta düzeyde sulamayla sıkı baş oluşur." },
+  ],
+  meyve: [
+    { key: "elma", label: "Elma", icon: "🍎", wateringDays: 8, fertilizingDays: 90, season: "Kasım–Mart (fidan dikimi)", tip: "En çok su isteyen meyve ağaçlarındandır; çiçeklenme ve meyve irileşme dönemlerinde ihmal etmeyin." },
+    { key: "armut", label: "Armut", icon: "🍐", wateringDays: 10, fertilizingDays: 90, season: "Kasım–Mart", tip: "Elmaya göre daha az suyla idare eder, aşırı sulamadan kaçının." },
+    { key: "kiraz", label: "Kiraz", icon: "🍒", wateringDays: 10, fertilizingDays: 90, season: "Kasım–Mart", tip: "Hasada yakın aşırı sulama meyvelerin çatlamasına yol açabilir." },
+    { key: "visne", label: "Vişne", icon: "🍒", wateringDays: 10, fertilizingDays: 90, season: "Kasım–Mart", tip: "Kirazla benzer bakım ister, orta düzeyde su yeterlidir." },
+    { key: "seftali", label: "Şeftali", icon: "🍑", wateringDays: 7, fertilizingDays: 75, season: "Kasım–Şubat", tip: "Yaz aylarında düzenli su isteyen, kuraklığa hassas bir türdür." },
+    { key: "kayisi", label: "Kayısı", icon: "🍑", wateringDays: 8, fertilizingDays: 90, season: "Kasım–Şubat", tip: "Çiçeklenme sonrası don riskine dikkat edin, sulamayı düzenli tutun." },
+    { key: "erik", label: "Erik", icon: "🟣", wateringDays: 10, fertilizingDays: 90, season: "Kasım–Mart", tip: "Orta düzeyde su yeterlidir, meyve irileşme döneminde arttırın." },
+    { key: "zeytin", label: "Zeytin", icon: "🫒", wateringDays: 15, fertilizingDays: 120, season: "Şubat–Mart", tip: "Kurağa dayanıklıdır ama düzenli sulama verimi belirgin arttırır; yaz aylarında 15 günlük periyotlar yaygındır." },
+    { key: "uzum", label: "Üzüm (Bağ)", icon: "🍇", wateringDays: 15, fertilizingDays: 90, season: "Şubat–Mart", tip: "Çiçeklenme döneminde sulamadan kaçının; olgunlaşmada aşırı su tane çatlamasına yol açar." },
+    { key: "incir", label: "İncir", icon: "🌿", wateringDays: 12, fertilizingDays: 90, season: "Şubat–Mart", tip: "Kurağa dayanıklıdır, kök bölgesinin tamamen kurumasına izin vermeyin." },
+    { key: "nar", label: "Nar", icon: "🔴", wateringDays: 12, fertilizingDays: 90, season: "Şubat–Mart", tip: "Düzensiz sulama meyvelerin çatlamasına neden olabilir." },
+    { key: "ceviz", label: "Ceviz", icon: "🌰", wateringDays: 12, fertilizingDays: 90, season: "Kasım–Mart", tip: "Derin kök yapısı sayesinde seyrek ama bol sulamadan yararlanır." },
+    { key: "findik", label: "Fındık", icon: "🌰", wateringDays: 12, fertilizingDays: 90, season: "Kasım–Mart", tip: "İlkbahar ve yaz başında düzenli nem verimi olumlu etkiler." },
+    { key: "badem", label: "Badem", icon: "🌰", wateringDays: 10, fertilizingDays: 90, season: "Kasım–Şubat", tip: "Erken çiçeklenir; iç doldurma döneminde su ihtiyacı artar." },
+    { key: "portakal", label: "Portakal", icon: "🍊", wateringDays: 8, fertilizingDays: 60, season: "Mart–Nisan", tip: "Turunçgiller düzenli sulama ister; toprağın tamamen kurumasına izin vermeyin." },
+    { key: "mandalina", label: "Mandalina", icon: "🍊", wateringDays: 8, fertilizingDays: 60, season: "Mart–Nisan", tip: "Portakalla benzer bakım ister, meyve tutumunda suyu aksatmayın." },
+    { key: "limon", label: "Limon", icon: "🍋", wateringDays: 7, fertilizingDays: 60, season: "Mart–Nisan", tip: "Turunçgiller arasında en sık sulama isteyenlerdendir." },
+    { key: "muz", label: "Muz", icon: "🍌", wateringDays: 5, fertilizingDays: 30, season: "İlkbahar", tip: "Bol yapraklı olduğundan su kaybı fazladır, toprağı sürekli nemli tutun." },
+    { key: "cilek", label: "Çilek", icon: "🍓", wateringDays: 3, fertilizingDays: 15, season: "Eylül–Ekim, Mart", tip: "Sık ama az miktarda sulama, yüzlek kök yapısına uygundur." },
+    { key: "karpuz", label: "Karpuz", icon: "🍉", wateringDays: 6, fertilizingDays: 20, season: "Nisan–Mayıs", tip: "Çiçeklenme ve meyve tutumunda su kesilmemeli, olgunlaşmaya yakın azaltılabilir." },
+    { key: "kavun", label: "Kavun", icon: "🍈", wateringDays: 6, fertilizingDays: 20, season: "Nisan–Mayıs", tip: "Karpuza benzer ister; hasada yakın aşırı sulama şeker oranını düşürebilir." },
+  ],
+  tahil: [
+    { key: "bugday", label: "Buğday", icon: "🌾", wateringDays: 20, fertilizingDays: 60, season: "Ekim–Kasım (güzlük)", tip: "Genellikle yağışa bağlıdır; kardeşlenme ve başaklanma dönemlerinde ek sulama verimi arttırır." },
+    { key: "arpa", label: "Arpa", icon: "🌾", wateringDays: 20, fertilizingDays: 60, season: "Ekim–Kasım (güzlük)", tip: "Buğdaya benzer bakım ister, kurağa biraz daha dayanıklıdır." },
+    { key: "misir", label: "Mısır", icon: "🌽", wateringDays: 6, fertilizingDays: 25, season: "Nisan–Mayıs", tip: "Püskül çıkarma ve tane doldurma dönemlerinde su ihtiyacı en yüksek seviyededir." },
+    { key: "aycicegi", label: "Ayçiçeği", icon: "🌻", wateringDays: 10, fertilizingDays: 30, season: "Nisan–Mayıs", tip: "Çiçeklenme ve tohum doldurma dönemlerinde sulamayı aksatmayın." },
+    { key: "pamuk", label: "Pamuk", icon: "🌱", wateringDays: 10, fertilizingDays: 30, season: "Nisan–Mayıs", tip: "Çiçeklenme ve koza oluşum döneminde su ihtiyacı artar." },
+  ],
+  diger: [
+    { key: "diger", label: "Diğer / Belirtilmemiş", icon: "🌱", wateringDays: null, fertilizingDays: null, season: "", tip: "Ürününüz listede yoksa notlar bölümüne tür bilgisini ekleyebilirsiniz. Genel kural: toprağın üst 2–3 cm’si kuruduğunda sulayın." },
+  ],
+};
+const CROP_BY_KEY = {};
+Object.keys(CROPS).forEach((catKey) => {
+  CROPS[catKey].forEach((c) => {
+    CROP_BY_KEY[c.key] = Object.assign({}, c, { category: catKey });
+  });
+});
+
+let uidCounter = 0;
+function uid() {
+  uidCounter += 1;
+  return Date.now().toString(36) + "-" + uidCounter + "-" + Math.random().toString(36).slice(2, 7);
+}
+/* ------------------------------------------------------------------ */
+/*  Supabase client management (config lives in this browser only)     */
+/* ------------------------------------------------------------------ */
+
+const CONFIG_KEY = "bahce_defterim_supabase_config";
+
+function loadSupabaseConfig() {
+  try {
+    const raw = window.localStorage.getItem(CONFIG_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed && parsed.url && parsed.anonKey) return parsed;
+    return null;
+  } catch (e) {
+    return null;
+  }
+}
+function saveSupabaseConfig(url, anonKey) {
+  try {
+    window.localStorage.setItem(CONFIG_KEY, JSON.stringify({ url: url, anonKey: anonKey }));
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+function clearSupabaseConfig() {
+  try {
+    window.localStorage.removeItem(CONFIG_KEY);
+  } catch (e) {
+    /* ignore */
+  }
+}
+function createSupabaseClient(url, anonKey) {
+  const lib = window.supabase;
+  if (!lib || !lib.createClient) return null;
+  try {
+    return lib.createClient(url, anonKey);
+  } catch (e) {
+    return null;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Small presentational pieces                                        */
+/* ------------------------------------------------------------------ */
+
+function Num({ children }) {
+  return <span style={{ fontFamily: FONT_MONO }}>{children}</span>;
+}
+
+function Chip({ active, onClick, children, color }) {
+  return (
+    <button
+      onClick={onClick}
+      className="px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap border flex-shrink-0"
+      style={{
+        backgroundColor: active ? color || COLORS.olive : "transparent",
+        color: active ? COLORS.white : COLORS.inkSoft,
+        borderColor: active ? color || COLORS.olive : COLORS.line,
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
+function FormField({ label, error, hint, children }) {
+  return (
+    <div>
+      <label className="text-xs font-semibold block mb-1.5" style={{ color: COLORS.inkSoft }}>
+        {label}
+      </label>
+      {children}
+      {hint && !error && (
+        <p className="text-xs mt-1.5" style={{ color: COLORS.inkSoft }}>
+          {hint}
+        </p>
+      )}
+      {error && (
+        <p className="text-xs mt-1" style={{ color: COLORS.clay }}>
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function TextInput(props) {
+  const { error, ...rest } = props;
+  return (
+    <input
+      {...rest}
+      className="w-full text-sm rounded-xl py-2.5 px-3 outline-none"
+      style={{ backgroundColor: COLORS.bgAlt, color: COLORS.ink, border: error ? "1px solid " + COLORS.clay : "1px solid transparent" }}
+    />
+  );
+}
+
+function PrimaryButton({ children, onClick, disabled, style }) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className="w-full py-3 rounded-xl font-medium text-sm flex items-center justify-center gap-2"
+      style={Object.assign({ backgroundColor: COLORS.olive, color: COLORS.white, opacity: disabled ? 0.6 : 1 }, style || {})}
+    >
+      {children}
+    </button>
+  );
+}
+
+function EmptyState({ onAdd }) {
+  return (
+    <div className="flex flex-col items-center text-center px-6 py-16">
+      <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4 text-3xl" style={{ backgroundColor: COLORS.bgAlt }}>
+        🌱
+      </div>
+      <h3 className="font-semibold text-lg mb-1" style={{ color: COLORS.ink, fontFamily: FONT_DISPLAY }}>
+        Henüz bahçe eklemediniz
+      </h3>
+      <p className="text-sm mb-5" style={{ color: COLORS.inkSoft }}>
+        İlk bahçenizi ekleyin, sulama ve gübreleme takibine hemen başlayın.
+      </p>
+      <button
+        onClick={onAdd}
+        className="px-5 py-2.5 rounded-xl font-medium text-sm flex items-center gap-2"
+        style={{ backgroundColor: COLORS.olive, color: COLORS.white }}
+      >
+        <IconPlus size={16} /> Bahçe Ekle
+      </button>
+    </div>
+  );
+}
+
+function ConfirmDialog({ title, message, confirmLabel, onConfirm, onCancel, danger }) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center px-0 sm:px-4"
+      style={{ backgroundColor: "rgba(19,32,24,0.6)" }}
+      onClick={onCancel}
+    >
+      <div
+        className="w-full sm:max-w-sm rounded-t-2xl sm:rounded-2xl p-5"
+        style={{ backgroundColor: COLORS.white }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h3 className="font-semibold text-lg mb-1" style={{ color: COLORS.ink, fontFamily: FONT_DISPLAY }}>
+          {title}
+        </h3>
+        <p className="text-sm mb-5" style={{ color: COLORS.inkSoft }}>
+          {message}
+        </p>
+        <div className="flex gap-3">
+          <button
+            onClick={onCancel}
+            className="flex-1 py-2.5 rounded-xl font-medium text-sm"
+            style={{ backgroundColor: COLORS.bgAlt, color: COLORS.ink }}
+          >
+            Vazgeç
+          </button>
+          <button
+            onClick={onConfirm}
+            className="flex-1 py-2.5 rounded-xl font-medium text-sm"
+            style={{ backgroundColor: danger ? COLORS.clay : COLORS.olive, color: COLORS.white }}
+          >
+            {confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DueCard({ label, status, icon, color }) {
+  return (
+    <div className="rounded-xl p-3" style={{ backgroundColor: COLORS.white, border: "1px solid " + COLORS.line }}>
+      <div className="flex items-center gap-1.5 mb-1.5">
+        <span style={{ fontSize: 13 }}>{icon}</span>
+        <span className="text-xs font-medium" style={{ color: COLORS.inkSoft }}>
+          {label}
+        </span>
+      </div>
+      {!status && (
+        <p className="text-sm" style={{ color: COLORS.inkSoft }}>
+          Kayıt yok
+        </p>
+      )}
+      {status && status.overdue && (
+        <p className="text-sm font-semibold" style={{ color: COLORS.clay }}>
+          Zamanı geldi
+        </p>
+      )}
+      {status && status.dueToday && (
+        <p className="text-sm font-semibold" style={{ color: COLORS.gold }}>
+          Bugün
+        </p>
+      )}
+      {status && !status.overdue && !status.dueToday && (
+        <p className="text-sm font-semibold">
+          <Num>{status.diffDays} gün sonra</Num>
+        </p>
+      )}
+    </div>
+  );
+}
+
+function LogRow({ log, onDelete, readOnly }) {
+  const meta = LOG_TYPES.find((lt) => lt.key === log.type) || LOG_TYPES[LOG_TYPES.length - 1];
+  const secondary = [log.amount, log.note].filter(Boolean).join(" · ");
+  return (
+    <div className="flex items-start gap-3 rounded-xl p-3" style={{ backgroundColor: COLORS.white, border: "1px solid " + COLORS.line }}>
+      <div className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 text-base" style={{ backgroundColor: meta.color + "22" }}>
+        {meta.icon}
+      </div>
+      <div className="flex-1 min-w-0 pt-0.5">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-sm font-medium" style={{ color: COLORS.ink }}>
+            {meta.label}
+          </span>
+          <span className="text-xs" style={{ color: COLORS.inkSoft }}>
+            <Num>{formatDateTR(log.date)}</Num>
+          </span>
+        </div>
+        {log.detail && (
+          <p className="text-sm mt-0.5" style={{ color: COLORS.ink }}>
+            {log.detail}
+          </p>
+        )}
+        {secondary && (
+          <p className="text-xs mt-0.5 truncate" style={{ color: COLORS.inkSoft }}>
+            {secondary}
+          </p>
+        )}
+      </div>
+      {!readOnly && (
+        <button onClick={onDelete} className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0" aria-label="Kaydı sil">
+          <IconTrash size={14} color={COLORS.inkSoft} />
+        </button>
+      )}
+    </div>
+  );
+}
+
+function GardenCard({ garden, crop, category, onClick }) {
+  const wateringStatus = getDueStatus(garden.last_watering, crop && crop.wateringDays);
+  return (
+    <button onClick={onClick} className="w-full text-left flex mb-3 rounded-xl overflow-hidden shadow-sm" style={{ backgroundColor: COLORS.white, border: "1px solid " + COLORS.line }}>
+      <div
+        aria-hidden="true"
+        style={{
+          width: "10px",
+          flexShrink: 0,
+          backgroundColor: category ? category.color : COLORS.inkSoft,
+          clipPath: "polygon(0 0, 100% 0, 100% 82%, 50% 100%, 0 82%)",
+        }}
+      />
+      <div className="flex-1 p-3.5 min-w-0">
+        <h3 className="font-semibold truncate" style={{ color: COLORS.ink, fontFamily: FONT_DISPLAY, fontSize: "1.05rem" }}>
+          {garden.name}
+        </h3>
+        <p className="text-xs mt-0.5 truncate" style={{ color: COLORS.inkSoft }}>
+          {crop ? crop.icon + " " + crop.label : "—"} · <Num>{formatArea(garden.area_m2)}</Num>
+        </p>
+        <div className="mt-2">
+          {!wateringStatus && (
+            <span className="text-xs" style={{ color: COLORS.inkSoft }}>
+              Henüz sulama kaydı yok
+            </span>
+          )}
+          {wateringStatus && wateringStatus.overdue && (
+            <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full" style={{ backgroundColor: COLORS.claySoft, color: COLORS.clay }}>
+              💧 Sulama zamanı geldi
+            </span>
+          )}
+          {wateringStatus && !wateringStatus.overdue && (
+            <span className="inline-flex items-center gap-1 text-xs" style={{ color: COLORS.inkSoft }}>
+              💧 Sulamaya {wateringStatus.diffDays} gün var
+            </span>
+          )}
+        </div>
+      </div>
+    </button>
+  );
+}
+
+function Toast({ toast }) {
+  if (!toast) return null;
+  return (
+    <div className="sticky top-0 z-50 px-4 pt-3">
+      <div className="rounded-xl px-4 py-2.5 text-sm font-medium shadow-md text-center" style={{ backgroundColor: toast.tone === "error" ? COLORS.clay : COLORS.oliveDeep, color: COLORS.white }}>
+        {toast.message}
+      </div>
+    </div>
+  );
+}
+/* ------------------------------------------------------------------ */
+/*  Setup screen — enter Supabase project URL + anon key (one-time)    */
+/* ------------------------------------------------------------------ */
+
+function SetupScreen({ onSaved }) {
+  const [url, setUrl] = useState("");
+  const [anonKey, setAnonKey] = useState("");
+  const [error, setError] = useState("");
+  const [checking, setChecking] = useState(false);
+
+  async function handleSubmit() {
+    setError("");
+    const trimmedUrl = url.trim().replace(/\/+$/, "");
+    const trimmedKey = anonKey.trim();
+    if (!trimmedUrl || !/^https?:\/\//.test(trimmedUrl)) {
+      setError("Geçerli bir Project URL girin (https:// ile başlamalı).");
+      return;
+    }
+    if (!trimmedKey || trimmedKey.length < 20) {
+      setError("Geçerli bir anon / public API key girin.");
+      return;
+    }
+    setChecking(true);
+    const client = createSupabaseClient(trimmedUrl, trimmedKey);
+    if (!client) {
+      setChecking(false);
+      setError("Supabase istemcisi başlatılamadı. Bağlantınızı kontrol edin.");
+      return;
+    }
+    try {
+      await client.auth.getSession();
+      saveSupabaseConfig(trimmedUrl, trimmedKey);
+      setChecking(false);
+      onSaved(trimmedUrl, trimmedKey);
+    } catch (e) {
+      setChecking(false);
+      setError("Bağlantı kurulamadı. URL ve anahtarı kontrol edip tekrar deneyin.");
+    }
+  }
+
+  return (
+    <div className="flex-1 flex flex-col justify-center px-6 py-10">
+      <div className="text-center mb-8">
+        <div className="text-4xl mb-3">🌱</div>
+        <h1 className="text-2xl font-semibold" style={{ fontFamily: FONT_DISPLAY, color: COLORS.ink }}>
+          Bahçe Defterim
+        </h1>
+        <p className="text-sm mt-2" style={{ color: COLORS.inkSoft }}>
+          Bu uygulama kendi Supabase projenize bağlanır. Kurulum bilgilerinizi bir kere girin, yeterli.
+        </p>
+      </div>
+
+      <div className="space-y-4">
+        <FormField label="Project URL" hint="Supabase panelinde Project Settings → API altında">
+          <TextInput value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://xxxxx.supabase.co" error={!!error} />
+        </FormField>
+        <FormField label="anon / public API key">
+          <TextInput value={anonKey} onChange={(e) => setAnonKey(e.target.value)} placeholder="eyJhbGciOiJIUzI1NiIs..." error={!!error} />
+        </FormField>
+        {error && <p className="text-xs" style={{ color: COLORS.clay }}>{error}</p>}
+        <PrimaryButton onClick={handleSubmit} disabled={checking}>
+          {checking ? <IconLoader size={16} /> : null} Kaydet ve Başla
+        </PrimaryButton>
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Auth screen — login / sign up                                      */
+/* ------------------------------------------------------------------ */
+
+function AuthScreen({ supabaseClient, onShowToast }) {
+  const [mode, setMode] = useState("login");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [signupDone, setSignupDone] = useState(false);
+
+  async function handleSubmit() {
+    setError("");
+    if (!email.trim() || !password) {
+      setError("E-posta ve şifre gerekli.");
+      return;
+    }
+    if (password.length < 6) {
+      setError("Şifre en az 6 karakter olmalı.");
+      return;
+    }
+    setBusy(true);
+    try {
+      if (mode === "login") {
+        const { error: err } = await supabaseClient.auth.signInWithPassword({ email: email.trim(), password: password });
+        if (err) throw err;
+      } else {
+        const { error: err } = await supabaseClient.auth.signUp({ email: email.trim(), password: password });
+        if (err) throw err;
+        setSignupDone(true);
+      }
+    } catch (e) {
+      const msg = (e && e.message) || "";
+      if (msg.indexOf("Invalid login") >= 0) setError("E-posta veya şifre hatalı.");
+      else if (msg.indexOf("already registered") >= 0 || msg.indexOf("already exists") >= 0) setError("Bu e-posta zaten kayıtlı. Giriş yapmayı deneyin.");
+      else if (msg.indexOf("Email not confirmed") >= 0) setError("E-posta henüz doğrulanmamış. Gelen kutunuzu kontrol edin.");
+      else setError(msg || "Bir sorun oluştu, tekrar deneyin.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (signupDone) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center text-center px-6 py-10">
+        <div className="text-4xl mb-3">📩</div>
+        <h2 className="text-xl font-semibold mb-2" style={{ fontFamily: FONT_DISPLAY, color: COLORS.ink }}>
+          E-postanı kontrol et
+        </h2>
+        <p className="text-sm mb-6" style={{ color: COLORS.inkSoft }}>
+          <strong>{email}</strong> adresine bir doğrulama linki gönderdik. Onayladıktan sonra giriş yapabilirsin.
+        </p>
+        <button onClick={() => { setSignupDone(false); setMode("login"); }} className="text-sm font-medium" style={{ color: COLORS.olive }}>
+          Giriş ekranına dön
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex-1 flex flex-col justify-center px-6 py-10">
+      <div className="text-center mb-8">
+        <div className="text-4xl mb-3">🌱</div>
+        <h1 className="text-2xl font-semibold" style={{ fontFamily: FONT_DISPLAY, color: COLORS.ink }}>
+          Bahçe Defterim
+        </h1>
+        <p className="text-sm mt-2" style={{ color: COLORS.inkSoft }}>
+          {mode === "login" ? "Hesabınızla giriş yapın." : "Yeni bir hesap oluşturun."}
+        </p>
+      </div>
+
+      <div className="space-y-4">
+        <FormField label="E-posta">
+          <TextInput type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="ornek@eposta.com" error={!!error} autoCapitalize="none" />
+        </FormField>
+        <FormField label="Şifre">
+          <TextInput type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="En az 6 karakter" error={!!error} />
+        </FormField>
+        {error && <p className="text-xs" style={{ color: COLORS.clay }}>{error}</p>}
+        <PrimaryButton onClick={handleSubmit} disabled={busy}>
+          {busy ? <IconLoader size={16} /> : null} {mode === "login" ? "Giriş Yap" : "Kayıt Ol"}
+        </PrimaryButton>
+      </div>
+
+      <button
+        onClick={() => { setMode(mode === "login" ? "signup" : "login"); setError(""); }}
+        className="text-sm font-medium mt-5 text-center"
+        style={{ color: COLORS.inkSoft }}
+      >
+        {mode === "login" ? "Hesabın yok mu? " : "Zaten hesabın var mı? "}
+        <span style={{ color: COLORS.olive, fontWeight: 600 }}>{mode === "login" ? "Kayıt ol" : "Giriş yap"}</span>
+      </button>
+    </div>
+  );
+}
+/* ------------------------------------------------------------------ */
+/*  Views — garden list, detail, form                                  */
+/* ------------------------------------------------------------------ */
+
+function ListView({ gardens, searchQuery, setSearchQuery, categoryFilter, setCategoryFilter, onSelectGarden, onAddGarden, totalAreaM2 }) {
+  const filtered = useMemo(() => {
+    return gardens.filter((g) => {
+      if (categoryFilter !== "tumu" && g.category !== categoryFilter) return false;
+      if (searchQuery.trim()) {
+        const q = searchQuery.trim().toLocaleLowerCase("tr-TR");
+        const crop = CROP_BY_KEY[g.crop];
+        const cropLabel = (crop ? crop.label : "").toLocaleLowerCase("tr-TR");
+        if (!g.name.toLocaleLowerCase("tr-TR").includes(q) && !cropLabel.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [gardens, categoryFilter, searchQuery]);
+
+  return (
+    <div className="flex-1 flex flex-col">
+      <header className="px-4 pt-6 pb-4" style={{ borderBottom: "1px solid " + COLORS.line }}>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 style={{ fontFamily: FONT_DISPLAY, color: COLORS.ink }} className="text-2xl font-semibold">
+              Bahçe Defterim
+            </h1>
+            <p className="text-xs mt-0.5" style={{ color: COLORS.inkSoft }}>
+              <Num>{gardens.length} bahçe · {formatArea(totalAreaM2)}</Num>
+            </p>
+          </div>
+          <button onClick={onAddGarden} className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: COLORS.olive, color: COLORS.white }} aria-label="Bahçe ekle">
+            <IconPlus size={20} />
+          </button>
+        </div>
+        <div className="mt-4 relative">
+          <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: COLORS.inkSoft, display: "flex" }}>
+            <IconSearch size={16} />
+          </span>
+          <input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Bahçe veya ürün ara..."
+            className="w-full text-sm rounded-xl py-2.5 pl-9 pr-3 outline-none"
+            style={{ backgroundColor: COLORS.bgAlt, color: COLORS.ink }}
+          />
+        </div>
+        <div className="flex gap-2 mt-3 overflow-x-auto hide-scrollbar" style={{ scrollbarWidth: "none" }}>
+          <Chip active={categoryFilter === "tumu"} onClick={() => setCategoryFilter("tumu")}>Tümü</Chip>
+          {CATEGORIES.map((c) => (
+            <Chip key={c.key} active={categoryFilter === c.key} onClick={() => setCategoryFilter(c.key)} color={c.color}>{c.label}</Chip>
+          ))}
+        </div>
+      </header>
+
+      <div className="px-4 mt-4 flex-1" style={{ paddingBottom: "1.5rem" }}>
+        {gardens.length === 0 && <EmptyState onAdd={onAddGarden} />}
+        {gardens.length > 0 && filtered.length === 0 && (
+          <p className="text-sm text-center py-10" style={{ color: COLORS.inkSoft }}>Aramanızla eşleşen bahçe yok.</p>
+        )}
+        {filtered.map((g) => (
+          <GardenCard key={g.id} garden={g} crop={CROP_BY_KEY[g.crop]} category={CATEGORIES.find((c) => c.key === g.category)} onClick={() => onSelectGarden(g.id)} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function GardenDetailView({ garden, crop, category, logs, onBack, onEdit, onDeleteGarden, onAddLog, onDeleteLog, logTypeFilter, setLogTypeFilter, readOnly, ownerLabel }) {
+  const wateringStatus = getDueStatus(garden.last_watering, crop && crop.wateringDays);
+  const fertilizingStatus = getDueStatus(garden.last_fertilizing, crop && crop.fertilizingDays);
+  const filteredLogs = logTypeFilter === "tumu" ? logs : logs.filter((l) => l.type === logTypeFilter);
+
+  return (
+    <div className="flex-1 flex flex-col">
+      <header className="px-4 pt-6 pb-4 flex items-start gap-3" style={{ borderBottom: "1px solid " + COLORS.line }}>
+        <button onClick={onBack} className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5" style={{ backgroundColor: COLORS.bgAlt }} aria-label="Geri">
+          <IconArrowLeft size={18} color={COLORS.ink} />
+        </button>
+        <div className="flex-1 min-w-0">
+          <h1 className="text-xl font-semibold truncate" style={{ fontFamily: FONT_DISPLAY, color: COLORS.ink }}>{garden.name}</h1>
+          <p className="text-xs mt-0.5 truncate" style={{ color: COLORS.inkSoft }}>
+            {crop ? crop.icon + " " + crop.label : "Ürün belirtilmedi"} · {category ? category.label : ""}
+            {ownerLabel ? " · " + ownerLabel : ""}
+          </p>
+        </div>
+        {!readOnly && (
+          <div className="flex gap-1.5 flex-shrink-0">
+            <button onClick={onEdit} className="w-9 h-9 rounded-full flex items-center justify-center" style={{ backgroundColor: COLORS.bgAlt }} aria-label="Düzenle">
+              <IconPencil size={16} color={COLORS.ink} />
+            </button>
+            <button onClick={onDeleteGarden} className="w-9 h-9 rounded-full flex items-center justify-center" style={{ backgroundColor: COLORS.claySoft }} aria-label="Sil">
+              <IconTrash size={16} color={COLORS.clay} />
+            </button>
+          </div>
+        )}
+      </header>
+
+      <div className="px-4 mt-4 flex-1" style={{ paddingBottom: "1.5rem" }}>
+        <div className="space-y-3">
+          <div className="rounded-xl p-4" style={{ backgroundColor: COLORS.white, border: "1px solid " + COLORS.line }}>
+            <div className="flex items-center gap-2 text-sm mb-2">
+              <span>📏</span>
+              <Num>{formatArea(garden.area_m2)}</Num>
+            </div>
+            {garden.planting_date && (
+              <div className="flex items-center gap-2 text-sm mb-2">
+                <span>📅</span>
+                <span style={{ color: COLORS.ink }}>Dikim: <Num>{formatDateTR(garden.planting_date)}</Num></span>
+              </div>
+            )}
+            {garden.notes && (
+              <p className="text-sm mt-2 pt-2" style={{ color: COLORS.inkSoft, borderTop: "1px solid " + COLORS.line }}>{garden.notes}</p>
+            )}
+          </div>
+
+          {crop && crop.tip && (
+            <div className="rounded-xl p-4" style={{ backgroundColor: COLORS.goldSoft }}>
+              <p className="text-xs font-semibold mb-1.5" style={{ color: COLORS.oliveDeep }}>BAKIM ÖNERİSİ</p>
+              <p className="text-sm mb-2" style={{ color: COLORS.ink }}>{crop.tip}</p>
+              <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs" style={{ color: COLORS.inkSoft }}>
+                {crop.wateringDays && <span>Sulama: ~{crop.wateringDays} günde bir</span>}
+                {crop.fertilizingDays && <span>Gübreleme: ~{crop.fertilizingDays} günde bir</span>}
+                {crop.season && <span>Dikim dönemi: {crop.season}</span>}
+              </div>
+              <p className="text-xs mt-2 italic" style={{ color: COLORS.inkSoft }}>Bu değerler genel bir rehberdir; toprak, iklim ve hava durumuna göre değişebilir.</p>
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-3">
+            <DueCard label="Sonraki Sulama" status={wateringStatus} icon="💧" color={COLORS.water} />
+            <DueCard label="Sonraki Gübreleme" status={fertilizingStatus} icon="🧪" color={COLORS.gold} />
+          </div>
+
+          <div>
+            <p className="text-xs font-semibold mb-2 mt-1" style={{ color: COLORS.inkSoft }}>KAYITLAR</p>
+            <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-1" style={{ scrollbarWidth: "none" }}>
+              <Chip active={logTypeFilter === "tumu"} onClick={() => setLogTypeFilter("tumu")}>Tümü</Chip>
+              {LOG_TYPES.map((lt) => (
+                <Chip key={lt.key} active={logTypeFilter === lt.key} onClick={() => setLogTypeFilter(lt.key)} color={lt.color}>{lt.label}</Chip>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            {filteredLogs.length === 0 && (
+              <p className="text-sm text-center py-8" style={{ color: COLORS.inkSoft }}>
+                {logs.length === 0 ? "Henüz kayıt eklenmedi." : "Bu türde kayıt yok."}
+              </p>
+            )}
+            {filteredLogs.map((log) => (
+              <LogRow key={log.id} log={log} readOnly={readOnly} onDelete={() => onDeleteLog(log.id)} />
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {!readOnly && (
+        <div className="sticky bottom-0 left-0 right-0 pointer-events-none z-30">
+          <div className="flex justify-end px-6 pb-6 pt-6">
+            <button onClick={onAddLog} className="pointer-events-auto flex items-center gap-2 px-5 py-3 rounded-full shadow-lg font-medium text-sm" style={{ backgroundColor: COLORS.olive, color: COLORS.white }}>
+              <IconPlus size={18} /> Kayıt Ekle
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+function GardenFormView({ initialValues, isEdit, onSave, onSaveAndAddAnother, onCancel }) {
+  const [form, setForm] = useState(
+    () =>
+      initialValues || {
+        name: "",
+        category: "sebze",
+        crop: "",
+        areaM2: "",
+        areaUnit: "m2",
+        plantingDate: "",
+        notes: "",
+      }
+  );
+  const [errors, setErrors] = useState({});
+  const cropOptions = CROPS[form.category] || [];
+
+  function update(field, value) {
+    setForm((prev) => Object.assign({}, prev, { [field]: value }));
+  }
+  function handleCategoryChange(catKey) {
+    setForm((prev) => Object.assign({}, prev, { category: catKey, crop: "" }));
+  }
+  function handleUnitToggle(newUnit) {
+    setForm((prev) => {
+      if (prev.areaUnit === newUnit) return prev;
+      const num = parseFloat(String(prev.areaM2).replace(",", "."));
+      if (isNaN(num)) return Object.assign({}, prev, { areaUnit: newUnit });
+      const converted = newUnit === "donum" ? num / 1000 : num * 1000;
+      const rounded = Math.round(converted * 1000) / 1000;
+      return Object.assign({}, prev, { areaUnit: newUnit, areaM2: String(rounded) });
+    });
+  }
+  function validate() {
+    const errs = {};
+    if (!form.name.trim()) errs.name = "Bahçe adı gerekli";
+    if (!form.crop) errs.crop = "Ürün türü seçin";
+    const areaNum = parseFloat(String(form.areaM2).replace(",", "."));
+    if (!form.areaM2 || isNaN(areaNum) || areaNum <= 0) errs.areaM2 = "Geçerli bir alan girin";
+    setErrors(errs);
+    return Object.keys(errs).length === 0;
+  }
+  function buildPayload() {
+    const areaNum = parseFloat(String(form.areaM2).replace(",", "."));
+    const areaM2 = form.areaUnit === "donum" ? areaNum * 1000 : areaNum;
+    return {
+      name: form.name.trim(),
+      category: form.category,
+      crop: form.crop,
+      areaM2: areaM2,
+      plantingDate: form.plantingDate || null,
+      notes: form.notes.trim(),
+    };
+  }
+  function handleSubmit(andAnother) {
+    if (!validate()) return;
+    const payload = buildPayload();
+    if (andAnother) {
+      onSaveAndAddAnother(payload);
+      setForm({ name: "", category: form.category, crop: "", areaM2: "", areaUnit: "m2", plantingDate: "", notes: "" });
+      setErrors({});
+    } else {
+      onSave(payload);
+    }
+  }
+
+  return (
+    <div className="flex-1 flex flex-col">
+      <header className="px-4 pt-6 pb-4 flex items-center gap-3" style={{ borderBottom: "1px solid " + COLORS.line }}>
+        <button onClick={onCancel} className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: COLORS.bgAlt }} aria-label="Vazgeç">
+          <IconArrowLeft size={18} color={COLORS.ink} />
+        </button>
+        <h1 className="text-xl font-semibold" style={{ fontFamily: FONT_DISPLAY, color: COLORS.ink }}>
+          {isEdit ? "Bahçeyi Düzenle" : "Yeni Bahçe"}
+        </h1>
+      </header>
+
+      <div className="px-4 mt-4 space-y-4" style={{ paddingBottom: "2.5rem" }}>
+        <FormField label="Bahçe adı" error={errors.name}>
+          <TextInput value={form.name} onChange={(e) => update("name", e.target.value)} placeholder="Örn. Arka Bahçe, 1 No'lu Tarla" error={errors.name} />
+        </FormField>
+
+        <FormField label="Ana kategori">
+          <div className="grid grid-cols-4 gap-2">
+            {CATEGORIES.map((c) => {
+              const active = form.category === c.key;
+              return (
+                <button key={c.key} onClick={() => handleCategoryChange(c.key)} className="flex flex-col items-center justify-center gap-1 rounded-xl py-2.5" style={{ backgroundColor: active ? c.color : COLORS.bgAlt, color: active ? COLORS.white : COLORS.inkSoft }}>
+                  <span style={{ fontSize: 16 }}>{c.icon}</span>
+                  <span className="text-xs font-medium">{c.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </FormField>
+
+        <FormField label="Ürün türü" error={errors.crop}>
+          <select value={form.crop} onChange={(e) => update("crop", e.target.value)} className="w-full text-sm rounded-xl py-2.5 px-3 outline-none" style={{ backgroundColor: COLORS.bgAlt, color: COLORS.ink, border: errors.crop ? "1px solid " + COLORS.clay : "1px solid transparent" }}>
+            <option value="">Seçin...</option>
+            {cropOptions.map((c) => (
+              <option key={c.key} value={c.key}>{c.icon} {c.label}</option>
+            ))}
+          </select>
+        </FormField>
+
+        <FormField label="Alan" error={errors.areaM2} hint="1 dönüm = 1.000 m²">
+          <div className="flex gap-2">
+            <input value={form.areaM2} onChange={(e) => update("areaM2", e.target.value)} inputMode="decimal" placeholder={form.areaUnit === "donum" ? "Örn. 3,5" : "Örn. 3500"} className="flex-1 min-w-0 text-sm rounded-xl py-2.5 px-3 outline-none" style={{ backgroundColor: COLORS.bgAlt, color: COLORS.ink, border: errors.areaM2 ? "1px solid " + COLORS.clay : "1px solid transparent" }} />
+            <div className="flex rounded-xl overflow-hidden flex-shrink-0" style={{ border: "1px solid " + COLORS.line }}>
+              <button onClick={() => handleUnitToggle("m2")} className="px-3 text-sm font-medium" style={{ backgroundColor: form.areaUnit === "m2" ? COLORS.olive : "transparent", color: form.areaUnit === "m2" ? COLORS.white : COLORS.inkSoft }}>m²</button>
+              <button onClick={() => handleUnitToggle("donum")} className="px-3 text-sm font-medium" style={{ backgroundColor: form.areaUnit === "donum" ? COLORS.olive : "transparent", color: form.areaUnit === "donum" ? COLORS.white : COLORS.inkSoft }}>dönüm</button>
+            </div>
+          </div>
+        </FormField>
+
+        <FormField label="Dikim tarihi (opsiyonel)">
+          <input type="date" value={form.plantingDate || ""} onChange={(e) => update("plantingDate", e.target.value)} className="w-full text-sm rounded-xl py-2.5 px-3 outline-none" style={{ backgroundColor: COLORS.bgAlt, color: COLORS.ink }} />
+        </FormField>
+
+        <FormField label="Notlar (opsiyonel)">
+          <textarea value={form.notes} onChange={(e) => update("notes", e.target.value)} rows={3} placeholder="Toprak yapısı, çeşit, konum vb." className="w-full text-sm rounded-xl py-2.5 px-3 outline-none resize-none" style={{ backgroundColor: COLORS.bgAlt, color: COLORS.ink }} />
+        </FormField>
+
+        <div className="pt-2 space-y-3">
+          <PrimaryButton onClick={() => handleSubmit(false)}>Kaydet</PrimaryButton>
+          {!isEdit && (
+            <button onClick={() => handleSubmit(true)} className="w-full py-3 rounded-xl font-medium text-sm" style={{ backgroundColor: COLORS.bgAlt, color: COLORS.ink }}>
+              Kaydet ve Yeni Ekle
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function LogFormSheet({ onSave, onCancel }) {
+  const [type, setType] = useState("sulama");
+  const [date, setDate] = useState(isoToday());
+  const [detail, setDetail] = useState("");
+  const [note, setNote] = useState("");
+  const [amount, setAmount] = useState("");
+  const activeMeta = LOG_TYPES.find((lt) => lt.key === type) || LOG_TYPES[0];
+
+  function handleTypeChange(newType) {
+    setType(newType);
+    setDetail("");
+  }
+  function handleSave() {
+    if (!date) return;
+    onSave({ type: type, date: date, detail: detail.trim(), amount: amount.trim(), note: note.trim() });
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center" style={{ backgroundColor: "rgba(19,32,24,0.6)" }} onClick={onCancel}>
+      <div className="w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl p-5" style={{ backgroundColor: COLORS.bg, maxHeight: "92vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-semibold text-lg" style={{ fontFamily: FONT_DISPLAY, color: COLORS.ink }}>Kayıt Ekle</h3>
+          <button onClick={onCancel} className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: COLORS.bgAlt }} aria-label="Kapat">
+            <IconX size={16} color={COLORS.ink} />
+          </button>
+        </div>
+
+        <p className="text-xs font-semibold mb-2" style={{ color: COLORS.inkSoft }}>İŞLEM TÜRÜ</p>
+        <div className="grid grid-cols-4 gap-2 mb-4">
+          {LOG_TYPES.map((lt) => {
+            const active = type === lt.key;
+            return (
+              <button key={lt.key} onClick={() => handleTypeChange(lt.key)} className="flex flex-col items-center justify-center gap-1 rounded-xl py-2.5 px-1" style={{ backgroundColor: active ? lt.color : COLORS.bgAlt, color: active ? COLORS.white : COLORS.inkSoft }}>
+                <span style={{ fontSize: 16 }}>{lt.icon}</span>
+                <span className="text-xs font-medium text-center leading-tight">{lt.label}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="space-y-3">
+          <FormField label="Tarih">
+            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full text-sm rounded-xl py-2.5 px-3 outline-none" style={{ backgroundColor: COLORS.bgAlt, color: COLORS.ink }} />
+          </FormField>
+          {activeMeta.detailLabel && (
+            <FormField label={activeMeta.detailLabel}>
+              <input value={detail} onChange={(e) => setDetail(e.target.value)} placeholder={activeMeta.detailPlaceholder || ""} className="w-full text-sm rounded-xl py-2.5 px-3 outline-none" style={{ backgroundColor: COLORS.bgAlt, color: COLORS.ink }} />
+            </FormField>
+          )}
+          <FormField label="Miktar (opsiyonel)">
+            <input value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="Örn. 20 litre, 5 kg" className="w-full text-sm rounded-xl py-2.5 px-3 outline-none" style={{ backgroundColor: COLORS.bgAlt, color: COLORS.ink }} />
+          </FormField>
+          <FormField label="Not (opsiyonel)">
+            <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Kısa bir not ekleyin" className="w-full text-sm rounded-xl py-2.5 px-3 outline-none" style={{ backgroundColor: COLORS.bgAlt, color: COLORS.ink }} />
+          </FormField>
+        </div>
+
+        <PrimaryButton onClick={handleSave} style={{ marginTop: "1.25rem" }}>Kaydet</PrimaryButton>
+      </div>
+    </div>
+  );
+}
+function CalendarEntryRow({ entry, onOpenGarden }) {
+  const meta = LOG_TYPES.find((lt) => lt.key === entry.type) || LOG_TYPES[LOG_TYPES.length - 1];
+  const secondary = [entry.amount, entry.note].filter(Boolean).join(" · ");
+  return (
+    <button onClick={() => onOpenGarden(entry.garden_id)} className="w-full flex items-start gap-3 rounded-xl p-3 text-left" style={{ backgroundColor: COLORS.white, border: "1px solid " + COLORS.line }}>
+      <div className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 text-base" style={{ backgroundColor: meta.color + "22" }}>{meta.icon}</div>
+      <div className="flex-1 min-w-0 pt-0.5">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="text-sm font-medium truncate" style={{ color: COLORS.ink }}>{entry.gardenName}</span>
+          <span className="text-xs" style={{ color: COLORS.inkSoft }}>· {meta.label}</span>
+        </div>
+        {entry.detail && <p className="text-sm mt-0.5" style={{ color: COLORS.ink }}>{entry.detail}</p>}
+        {secondary && <p className="text-xs mt-0.5 truncate" style={{ color: COLORS.inkSoft }}>{secondary}</p>}
+      </div>
+      <span style={{ marginTop: 4 }}><IconChevronRight size={16} color={COLORS.inkSoft} /></span>
+    </button>
+  );
+}
+
+function CalendarView({ entries, monthDate, onPrevMonth, onNextMonth, onToday, onOpenGarden }) {
+  const [selectedDate, setSelectedDate] = useState(null);
+  const year = monthDate.getUTCFullYear();
+  const month = monthDate.getUTCMonth();
+  const monthLabel = monthDate.toLocaleDateString("tr-TR", { month: "long", year: "numeric", timeZone: "UTC" });
+  const numDays = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+  const firstWeekday = (new Date(Date.UTC(year, month, 1)).getUTCDay() + 6) % 7;
+  const todayIso = isoToday();
+
+  const entriesByDate = useMemo(() => {
+    const map = {};
+    entries.forEach((e) => { if (!map[e.date]) map[e.date] = []; map[e.date].push(e); });
+    return map;
+  }, [entries]);
+
+  const cells = [];
+  for (let i = 0; i < firstWeekday; i++) cells.push(null);
+  for (let d = 1; d <= numDays; d++) cells.push(isoOfYMD(year, month, d));
+  while (cells.length % 7 !== 0) cells.push(null);
+
+  const selectedEntries = selectedDate ? entriesByDate[selectedDate] || [] : [];
+
+  return (
+    <div className="flex-1 flex flex-col">
+      <header className="px-4 pt-6 pb-4" style={{ borderBottom: "1px solid " + COLORS.line }}>
+        <h1 className="text-2xl font-semibold" style={{ fontFamily: FONT_DISPLAY, color: COLORS.ink }}>Takvim</h1>
+        <div className="flex items-center justify-between mt-3">
+          <button onClick={onPrevMonth} className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: COLORS.bgAlt }} aria-label="Önceki ay"><IconChevronLeft size={16} color={COLORS.ink} /></button>
+          <button onClick={onToday} className="text-sm font-medium capitalize" style={{ color: COLORS.ink, fontFamily: FONT_DISPLAY }}>{monthLabel}</button>
+          <button onClick={onNextMonth} className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: COLORS.bgAlt }} aria-label="Sonraki ay"><IconChevronRight size={16} color={COLORS.ink} /></button>
+        </div>
+      </header>
+
+      <div className="px-4 mt-4">
+        <div className="grid grid-cols-7 gap-1 mb-1.5">
+          {WEEKDAY_LABELS.map((w) => <div key={w} className="text-center text-xs font-medium" style={{ color: COLORS.inkSoft }}>{w}</div>)}
+        </div>
+        <div className="grid grid-cols-7 gap-1">
+          {cells.map((iso, idx) => {
+            if (!iso) return <div key={idx} />;
+            const dayEntries = entriesByDate[iso] || [];
+            const uniqueColors = [];
+            const seen = {};
+            dayEntries.forEach((e) => {
+              if (!seen[e.type]) { seen[e.type] = true; const meta = LOG_TYPES.find((lt) => lt.key === e.type); if (meta) uniqueColors.push(meta.color); }
+            });
+            const dayNum = parseInt(iso.split("-")[2], 10);
+            const isToday = iso === todayIso;
+            const isSelected = iso === selectedDate;
+            return (
+              <button key={iso} onClick={() => setSelectedDate(isSelected ? null : iso)} className="aspect-square rounded-lg flex flex-col items-center justify-center gap-0.5" style={{ backgroundColor: isSelected ? COLORS.olive : isToday ? COLORS.goldSoft : COLORS.white, border: "1px solid " + (isSelected ? COLORS.olive : COLORS.line) }}>
+                <span className="text-xs" style={{ color: isSelected ? COLORS.white : COLORS.ink, fontFamily: FONT_MONO }}>{dayNum}</span>
+                <div className="flex gap-0.5" style={{ minHeight: 4 }}>
+                  {uniqueColors.slice(0, 4).map((c, i) => <span key={i} style={{ width: 4, height: 4, borderRadius: 999, backgroundColor: isSelected ? COLORS.white : c, display: "block" }} />)}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="px-4 mt-5 flex-1" style={{ paddingBottom: "2rem" }}>
+        {selectedDate && (
+          <>
+            <p className="text-xs font-semibold mb-2" style={{ color: COLORS.inkSoft }}><Num>{formatDateTR(selectedDate)}</Num> KAYITLARI</p>
+            {selectedEntries.length === 0 && <p className="text-sm py-4" style={{ color: COLORS.inkSoft }}>Bu tarihte kayıt yok.</p>}
+            <div className="space-y-2">
+              {selectedEntries.map((e) => <CalendarEntryRow key={e.id} entry={e} onOpenGarden={onOpenGarden} />)}
+            </div>
+          </>
+        )}
+        {!selectedDate && <p className="text-sm text-center py-6" style={{ color: COLORS.inkSoft }}>Kayıtları görmek için bir güne dokunun.</p>}
+      </div>
+    </div>
+  );
+}
+
+function StatsView({ gardens, onSelectGarden, onResetAll }) {
+  const totalAreaM2 = gardens.reduce((sum, g) => sum + (g.area_m2 || 0), 0);
+  const byCategory = CATEGORIES.map((c) => ({ key: c.key, label: c.label, color: c.color, count: gardens.filter((g) => g.category === c.key).length }));
+  const maxCount = Math.max(1, ...byCategory.map((c) => c.count));
+  const overdueWatering = gardens.filter((g) => {
+    const crop = CROP_BY_KEY[g.crop];
+    const status = getDueStatus(g.last_watering, crop && crop.wateringDays);
+    return status && status.overdue;
+  });
+
+  return (
+    <div className="flex-1 flex flex-col">
+      <header className="px-4 pt-6 pb-4" style={{ borderBottom: "1px solid " + COLORS.line }}>
+        <h1 className="text-2xl font-semibold" style={{ fontFamily: FONT_DISPLAY, color: COLORS.ink }}>İstatistikler</h1>
+      </header>
+      <div className="px-4 mt-4 space-y-4 flex-1" style={{ paddingBottom: "2rem" }}>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="rounded-xl p-4" style={{ backgroundColor: COLORS.white, border: "1px solid " + COLORS.line }}>
+            <p className="text-xs mb-1" style={{ color: COLORS.inkSoft }}>Toplam bahçe</p>
+            <p className="text-2xl font-semibold" style={{ fontFamily: FONT_MONO, color: COLORS.ink }}>{gardens.length}</p>
+          </div>
+          <div className="rounded-xl p-4" style={{ backgroundColor: COLORS.white, border: "1px solid " + COLORS.line }}>
+            <p className="text-xs mb-1" style={{ color: COLORS.inkSoft }}>Toplam alan</p>
+            <p className="text-lg font-semibold" style={{ fontFamily: FONT_MONO, color: COLORS.ink }}>{formatArea(totalAreaM2)}</p>
+          </div>
+        </div>
+
+        <div className="rounded-xl p-4" style={{ backgroundColor: COLORS.white, border: "1px solid " + COLORS.line }}>
+          <p className="text-xs font-semibold mb-3" style={{ color: COLORS.inkSoft }}>KATEGORİ DAĞILIMI</p>
+          <div className="space-y-2.5">
+            {byCategory.map((c) => (
+              <div key={c.key} className="flex items-center gap-2">
+                <span className="text-xs w-24 flex-shrink-0" style={{ color: COLORS.ink }}>{c.label}</span>
+                <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ backgroundColor: COLORS.bgAlt }}>
+                  <div className="h-full rounded-full" style={{ width: (c.count / maxCount) * 100 + "%", backgroundColor: c.color }} />
+                </div>
+                <span className="text-xs font-medium w-5 text-right flex-shrink-0" style={{ color: COLORS.inkSoft, fontFamily: FONT_MONO }}>{c.count}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="rounded-xl p-4" style={{ backgroundColor: overdueWatering.length ? COLORS.claySoft : COLORS.white, border: "1px solid " + (overdueWatering.length ? COLORS.clay : COLORS.line) }}>
+          <p className="text-xs font-semibold mb-2" style={{ color: overdueWatering.length ? COLORS.clay : COLORS.inkSoft }}>SULAMA ZAMANI GELENLER{overdueWatering.length > 0 ? " (" + overdueWatering.length + ")" : ""}</p>
+          {overdueWatering.length === 0 && <p className="text-sm" style={{ color: COLORS.inkSoft }}>Şu an bekleyen sulama yok.</p>}
+          <div className="space-y-1.5">
+            {overdueWatering.map((g) => (
+              <button key={g.id} onClick={() => onSelectGarden(g.id)} className="flex items-center justify-between w-full text-left py-0.5">
+                <span className="text-sm" style={{ color: COLORS.ink }}>{g.name}</span>
+                <IconChevronRight size={14} color={COLORS.inkSoft} />
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {gardens.length > 0 && (
+          <button onClick={onResetAll} className="text-xs w-full text-center py-3" style={{ color: COLORS.inkSoft }}>Tüm bahçelerimi sil</button>
+        )}
+      </div>
+    </div>
+  );
+}
+function ProfileView({ profile, onSignOut, onGoAdmin }) {
+  return (
+    <div className="flex-1 flex flex-col">
+      <header className="px-4 pt-6 pb-4" style={{ borderBottom: "1px solid " + COLORS.line }}>
+        <h1 className="text-2xl font-semibold" style={{ fontFamily: FONT_DISPLAY, color: COLORS.ink }}>Profil</h1>
+      </header>
+      <div className="px-4 mt-4 space-y-4 flex-1" style={{ paddingBottom: "2rem" }}>
+        <div className="rounded-xl p-4 flex items-center gap-3" style={{ backgroundColor: COLORS.white, border: "1px solid " + COLORS.line }}>
+          <div className="w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: COLORS.bgAlt }}>
+            <IconUser size={20} color={COLORS.olive} />
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-medium truncate" style={{ color: COLORS.ink }}>{profile.email}</p>
+            <p className="text-xs mt-0.5" style={{ color: COLORS.inkSoft }}>{profile.role === "admin" ? "Yönetici hesabı" : "Kullanıcı hesabı"}</p>
+          </div>
+        </div>
+
+        {profile.role === "admin" && (
+          <button onClick={onGoAdmin} className="w-full rounded-xl p-4 flex items-center gap-3 text-left" style={{ backgroundColor: COLORS.goldSoft }}>
+            <IconShield size={20} color={COLORS.gold} />
+            <div className="flex-1">
+              <p className="text-sm font-medium" style={{ color: COLORS.ink }}>Yönetim Paneli</p>
+              <p className="text-xs mt-0.5" style={{ color: COLORS.inkSoft }}>Tüm kullanıcıların bahçelerini görüntüle</p>
+            </div>
+            <IconChevronRight size={16} color={COLORS.inkSoft} />
+          </button>
+        )}
+
+        <button onClick={onSignOut} className="w-full rounded-xl p-4 flex items-center gap-3 text-left" style={{ backgroundColor: COLORS.white, border: "1px solid " + COLORS.line }}>
+          <IconLogOut size={20} color={COLORS.clay} />
+          <p className="text-sm font-medium" style={{ color: COLORS.clay }}>Çıkış Yap</p>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function AdminUsersView({ users, onBack, onSelectUser }) {
+  return (
+    <div className="flex-1 flex flex-col">
+      <header className="px-4 pt-6 pb-4 flex items-center gap-3" style={{ borderBottom: "1px solid " + COLORS.line }}>
+        <button onClick={onBack} className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: COLORS.bgAlt }} aria-label="Geri"><IconArrowLeft size={18} color={COLORS.ink} /></button>
+        <div>
+          <h1 className="text-xl font-semibold" style={{ fontFamily: FONT_DISPLAY, color: COLORS.ink }}>Yönetim Paneli</h1>
+          <p className="text-xs mt-0.5" style={{ color: COLORS.inkSoft }}><Num>{users.length} kullanıcı</Num></p>
+        </div>
+      </header>
+      <div className="px-4 mt-4 space-y-2 flex-1" style={{ paddingBottom: "2rem" }}>
+        {users.map((u) => (
+          <button key={u.id} onClick={() => onSelectUser(u)} className="w-full flex items-center gap-3 rounded-xl p-3 text-left" style={{ backgroundColor: COLORS.white, border: "1px solid " + COLORS.line }}>
+            <div className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: COLORS.bgAlt }}>
+              <IconUser size={16} color={COLORS.inkSoft} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium truncate" style={{ color: COLORS.ink }}>{u.email}{u.role === "admin" ? " ★" : ""}</p>
+              <p className="text-xs mt-0.5" style={{ color: COLORS.inkSoft }}><Num>{u.gardenCount} bahçe</Num></p>
+            </div>
+            <IconChevronRight size={16} color={COLORS.inkSoft} />
+          </button>
+        ))}
+        {users.length === 0 && <p className="text-sm text-center py-10" style={{ color: COLORS.inkSoft }}>Henüz başka kullanıcı yok.</p>}
+      </div>
+    </div>
+  );
+}
+
+function AdminUserGardensView({ targetUser, gardens, loading, onBack, onSelectGarden }) {
+  return (
+    <div className="flex-1 flex flex-col">
+      <header className="px-4 pt-6 pb-4 flex items-center gap-3" style={{ borderBottom: "1px solid " + COLORS.line }}>
+        <button onClick={onBack} className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: COLORS.bgAlt }} aria-label="Geri"><IconArrowLeft size={18} color={COLORS.ink} /></button>
+        <div className="min-w-0">
+          <h1 className="text-xl font-semibold truncate" style={{ fontFamily: FONT_DISPLAY, color: COLORS.ink }}>{targetUser.email}</h1>
+          <p className="text-xs mt-0.5" style={{ color: COLORS.inkSoft }}>Salt okunur görünüm</p>
+        </div>
+      </header>
+      <div className="px-4 mt-4 flex-1" style={{ paddingBottom: "2rem" }}>
+        {loading && (
+          <div className="flex items-center justify-center py-12"><IconLoader size={20} color={COLORS.olive} /></div>
+        )}
+        {!loading && gardens.length === 0 && <p className="text-sm text-center py-10" style={{ color: COLORS.inkSoft }}>Bu kullanıcının henüz bahçesi yok.</p>}
+        {!loading && gardens.map((g) => (
+          <GardenCard key={g.id} garden={g} crop={CROP_BY_KEY[g.crop]} category={CATEGORIES.find((c) => c.key === g.category)} onClick={() => onSelectGarden(g)} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function TabBar({ active, onChange }) {
+  const tabs = [
+    { key: "list", label: "Bahçeler", icon: "🌻" },
+    { key: "calendar", label: "Takvim", icon: "📅" },
+    { key: "stats", label: "İstatistik", icon: "📊" },
+    { key: "profile", label: "Profil", icon: "👤" },
+  ];
+  return (
+    <div className="sticky bottom-0 left-0 right-0 z-30" style={{ backgroundColor: COLORS.white, borderTop: "1px solid " + COLORS.line }}>
+      <div className="flex">
+        {tabs.map((t) => {
+          const isActive = active === t.key;
+          return (
+            <button key={t.key} onClick={() => onChange(t.key)} className="flex-1 flex flex-col items-center justify-center gap-1 py-2.5">
+              <span style={{ fontSize: 18, opacity: isActive ? 1 : 0.55 }}>{t.icon}</span>
+              <span className="text-xs font-medium" style={{ color: isActive ? COLORS.olive : COLORS.inkSoft }}>{t.label}</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+/* ------------------------------------------------------------------ */
+/*  Root component                                                     */
+/* ------------------------------------------------------------------ */
+
+async function loadMainData(client, userId) {
+  const [gardensRes, logsRes] = await Promise.all([
+    client.from("gardens").select("*").eq("user_id", userId).order("created_at", { ascending: false }),
+    client.from("garden_logs").select("*").eq("user_id", userId).order("date", { ascending: false }),
+  ]);
+  return {
+    gardens: gardensRes.data || [],
+    logs: logsRes.data || [],
+    error: gardensRes.error || logsRes.error || null,
+  };
+}
+
+function App() {
+  const [configLoaded, setConfigLoaded] = useState(false);
+  const [config, setConfig] = useState(null);
+  const [supabaseClient, setSupabaseClient] = useState(null);
+
+  const [authChecked, setAuthChecked] = useState(false);
+  const [session, setSession] = useState(null);
+  const [profile, setProfile] = useState(null);
+
+  const [gardens, setGardens] = useState([]);
+  const [logs, setLogs] = useState([]);
+  const [dataLoading, setDataLoading] = useState(false);
+
+  const [view, setView] = useState("main");
+  const [mainTab, setMainTab] = useState("list");
+  const [selectedGardenId, setSelectedGardenId] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("tumu");
+  const [logTypeFilter, setLogTypeFilter] = useState("tumu");
+  const [editingGardenId, setEditingGardenId] = useState(null);
+  const [showLogForm, setShowLogForm] = useState(false);
+  const [confirmState, setConfirmState] = useState(null);
+  const [toast, setToast] = useState(null);
+  const [calendarMonth, setCalendarMonth] = useState(() => {
+    const now = new Date();
+    return new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1));
+  });
+
+  const [adminUsers, setAdminUsers] = useState([]);
+  const [adminUsersLoading, setAdminUsersLoading] = useState(false);
+  const [adminTargetUser, setAdminTargetUser] = useState(null);
+  const [adminTargetGardens, setAdminTargetGardens] = useState([]);
+  const [adminTargetGardensLoading, setAdminTargetGardensLoading] = useState(false);
+  const [adminTargetGarden, setAdminTargetGarden] = useState(null);
+  const [adminTargetGardenLogs, setAdminTargetGardenLogs] = useState([]);
+
+  useEffect(() => {
+    const cfg = loadSupabaseConfig();
+    setConfig(cfg);
+    setConfigLoaded(true);
+  }, []);
+
+  useEffect(() => {
+    if (!config) return;
+    setSupabaseClient(createSupabaseClient(config.url, config.anonKey));
+  }, [config]);
+
+  useEffect(() => {
+    if (!supabaseClient) return;
+    let mounted = true;
+    supabaseClient.auth.getSession().then(({ data }) => {
+      if (mounted) { setSession(data.session); setAuthChecked(true); }
+    }).catch(() => { if (mounted) setAuthChecked(true); });
+    const { data: listener } = supabaseClient.auth.onAuthStateChange((event, newSession) => {
+      if (mounted) setSession(newSession);
+    });
+    return () => { mounted = false; if (listener && listener.subscription) listener.subscription.unsubscribe(); };
+  }, [supabaseClient]);
+
+  useEffect(() => {
+    if (!supabaseClient || !session) { setProfile(null); return; }
+    let mounted = true;
+    (async () => {
+      const { data } = await supabaseClient.from("profiles").select("*").eq("id", session.user.id).single();
+      if (mounted) setProfile(data || null);
+    })();
+    return () => { mounted = false; };
+  }, [supabaseClient, session]);
+
+  useEffect(() => {
+    if (!supabaseClient || !session || !profile) return;
+    let mounted = true;
+    setDataLoading(true);
+    (async () => {
+      const result = await loadMainData(supabaseClient, session.user.id);
+      if (mounted) { setGardens(result.gardens); setLogs(result.logs); setDataLoading(false); }
+    })();
+    return () => { mounted = false; };
+  }, [supabaseClient, session, profile]);
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 2400);
+    return () => clearTimeout(t);
+  }, [toast]);
+
+  function showToast(message, tone) {
+    setToast({ message: message, tone: tone || "success" });
+  }
+
+  const calendarEntries = useMemo(() => {
+    const nameById = {};
+    gardens.forEach((g) => { nameById[g.id] = g.name; });
+    return logs.map((l) => Object.assign({}, l, { gardenName: nameById[l.garden_id] || "" }));
+  }, [logs, gardens]);
+
+  const selectedGardenLogs = useMemo(() => {
+    return logs.filter((l) => l.garden_id === selectedGardenId).sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+  }, [logs, selectedGardenId]);
+
+  function openGardenDetail(id) {
+    setSelectedGardenId(id);
+    setLogTypeFilter("tumu");
+    setView("detail");
+  }
+  function openAddForm() { setEditingGardenId(null); setView("gardenForm"); }
+  function openEditForm() { setEditingGardenId(selectedGardenId); setView("gardenForm"); }
+
+  async function handleSaveNewGarden(payload, stayOnForm) {
+    const row = { user_id: session.user.id, name: payload.name, category: payload.category, crop: payload.crop, area_m2: payload.areaM2, planting_date: payload.plantingDate, notes: payload.notes };
+    const { data, error } = await supabaseClient.from("gardens").insert(row).select().single();
+    if (error) { showToast("Kaydedilemedi: " + error.message, "error"); return; }
+    setGardens((prev) => [data].concat(prev));
+    showToast("Bahçe eklendi");
+    if (!stayOnForm) setView("main");
+  }
+  async function handleSaveEditGarden(payload) {
+    const row = { name: payload.name, category: payload.category, crop: payload.crop, area_m2: payload.areaM2, planting_date: payload.plantingDate, notes: payload.notes };
+    const { data, error } = await supabaseClient.from("gardens").update(row).eq("id", editingGardenId).select().single();
+    if (error) { showToast("Güncellenemedi: " + error.message, "error"); return; }
+    setGardens((prev) => prev.map((g) => (g.id === data.id ? data : g)));
+    showToast("Bahçe güncellendi");
+    setView("detail");
+  }
+  async function handleAddLog(logValues) {
+    const row = { garden_id: selectedGardenId, user_id: session.user.id, type: logValues.type, date: logValues.date, detail: logValues.detail || null, amount: logValues.amount || null, note: logValues.note || null };
+    const { data, error } = await supabaseClient.from("garden_logs").insert(row).select().single();
+    if (error) { showToast("Kaydedilemedi: " + error.message, "error"); return; }
+    setLogs((prev) => [data].concat(prev));
+    const { data: updatedGarden } = await supabaseClient.from("gardens").select("*").eq("id", selectedGardenId).single();
+    if (updatedGarden) setGardens((prev) => prev.map((g) => (g.id === updatedGarden.id ? updatedGarden : g)));
+    showToast("Kayıt eklendi");
+    setShowLogForm(false);
+  }
+  async function handleDeleteLogEntry(gardenId, logId) {
+    const { error } = await supabaseClient.from("garden_logs").delete().eq("id", logId);
+    if (error) { showToast("Silinemedi", "error"); setConfirmState(null); return; }
+    setLogs((prev) => prev.filter((l) => l.id !== logId));
+    const { data: updatedGarden } = await supabaseClient.from("gardens").select("*").eq("id", gardenId).single();
+    if (updatedGarden) setGardens((prev) => prev.map((g) => (g.id === updatedGarden.id ? updatedGarden : g)));
+    showToast("Kayıt silindi");
+    setConfirmState(null);
+  }
+  async function handleDeleteGardenConfirmed(gardenId) {
+    const { error } = await supabaseClient.from("gardens").delete().eq("id", gardenId);
+    if (error) { showToast("Silinemedi", "error"); setConfirmState(null); return; }
+    setGardens((prev) => prev.filter((g) => g.id !== gardenId));
+    setLogs((prev) => prev.filter((l) => l.garden_id !== gardenId));
+    showToast("Bahçe silindi");
+    setConfirmState(null);
+    setView("main");
+    setSelectedGardenId(null);
+  }
+  async function handleResetAllConfirmed() {
+    const { error } = await supabaseClient.from("gardens").delete().eq("user_id", session.user.id);
+    if (error) { showToast("Silinemedi", "error"); setConfirmState(null); return; }
+    setGardens([]);
+    setLogs([]);
+    showToast("Tüm bahçeler silindi");
+    setConfirmState(null);
+    setView("main");
+    setMainTab("list");
+  }
+  async function handleSignOut() {
+    await supabaseClient.auth.signOut();
+    setGardens([]); setLogs([]); setView("main"); setMainTab("list");
+  }
+
+  function goToPrevMonth() { setCalendarMonth((p) => new Date(Date.UTC(p.getUTCFullYear(), p.getUTCMonth() - 1, 1))); }
+  function goToNextMonth() { setCalendarMonth((p) => new Date(Date.UTC(p.getUTCFullYear(), p.getUTCMonth() + 1, 1))); }
+  function goToCurrentMonth() { const n = new Date(); setCalendarMonth(new Date(Date.UTC(n.getFullYear(), n.getMonth(), 1))); }
+
+  async function openAdminPanel() {
+    setView("adminUsers");
+    setAdminUsersLoading(true);
+    const { data: profiles } = await supabaseClient.from("profiles").select("*").order("created_at");
+    const { data: allGardens } = await supabaseClient.from("gardens").select("id, user_id");
+    const counts = {};
+    (allGardens || []).forEach((g) => { counts[g.user_id] = (counts[g.user_id] || 0) + 1; });
+    setAdminUsers((profiles || []).map((p) => Object.assign({}, p, { gardenCount: counts[p.id] || 0 })));
+    setAdminUsersLoading(false);
+  }
+  async function openAdminUserGardens(user) {
+    setAdminTargetUser(user);
+    setView("adminUserGardens");
+    setAdminTargetGardensLoading(true);
+    const { data } = await supabaseClient.from("gardens").select("*").eq("user_id", user.id).order("created_at", { ascending: false });
+    setAdminTargetGardens(data || []);
+    setAdminTargetGardensLoading(false);
+  }
+  async function openAdminGardenDetail(garden) {
+    setAdminTargetGarden(garden);
+    const { data } = await supabaseClient.from("garden_logs").select("*").eq("garden_id", garden.id).order("date", { ascending: false });
+    setAdminTargetGardenLogs(data || []);
+    setView("adminGardenDetail");
+  }
+
+  const selectedGarden = gardens.find((g) => g.id === selectedGardenId) || null;
+  const editingGarden = editingGardenId ? gardens.find((g) => g.id === editingGardenId) : null;
+  const gardenFormInitialValues = editingGarden ? {
+    name: editingGarden.name, category: editingGarden.category, crop: editingGarden.crop,
+    areaM2: editingGarden.area_m2 >= 1000 ? Math.round((editingGarden.area_m2 / 1000) * 1000) / 1000 : editingGarden.area_m2,
+    areaUnit: editingGarden.area_m2 >= 1000 ? "donum" : "m2",
+    plantingDate: editingGarden.planting_date || "", notes: editingGarden.notes || "",
+  } : null;
+  const totalAreaM2 = useMemo(() => gardens.reduce((sum, g) => sum + (g.area_m2 || 0), 0), [gardens]);
+
+  const showSetup = configLoaded && !config;
+  const showAuth = configLoaded && config && supabaseClient && authChecked && !session;
+  const showApp = configLoaded && config && supabaseClient && authChecked && session && profile;
+  const showLoadingGate = configLoaded && config && supabaseClient && (!authChecked || (session && !profile));
+
+  return (
+    <div className="min-h-screen flex justify-center" style={{ backgroundColor: COLORS.desk }}>
+      <div className="w-full flex flex-col" style={{ maxWidth: "28rem", backgroundColor: COLORS.bg, minHeight: "100vh", fontFamily: FONT_BODY }}>
+        <Toast toast={toast} />
+
+        {!configLoaded && (
+          <div className="flex-1 flex items-center justify-center py-24"><IconLoader size={22} color={COLORS.olive} /></div>
+        )}
+
+        {showSetup && <SetupScreen onSaved={(url, key) => setConfig({ url: url, anonKey: key })} />}
+
+        {showLoadingGate && (
+          <div className="flex-1 flex items-center justify-center py-24"><IconLoader size={22} color={COLORS.olive} /></div>
+        )}
+
+        {showAuth && <AuthScreen supabaseClient={supabaseClient} />}
+
+        {showApp && dataLoading && (
+          <div className="flex-1 flex items-center justify-center py-24"><IconLoader size={22} color={COLORS.olive} /></div>
+        )}
+
+        {showApp && !dataLoading && view === "main" && mainTab === "list" && (
+          <ListView gardens={gardens} searchQuery={searchQuery} setSearchQuery={setSearchQuery} categoryFilter={categoryFilter} setCategoryFilter={setCategoryFilter} onSelectGarden={openGardenDetail} onAddGarden={openAddForm} totalAreaM2={totalAreaM2} />
+        )}
+        {showApp && !dataLoading && view === "main" && mainTab === "calendar" && (
+          <CalendarView entries={calendarEntries} monthDate={calendarMonth} onPrevMonth={goToPrevMonth} onNextMonth={goToNextMonth} onToday={goToCurrentMonth} onOpenGarden={openGardenDetail} />
+        )}
+        {showApp && !dataLoading && view === "main" && mainTab === "stats" && (
+          <StatsView gardens={gardens} onSelectGarden={openGardenDetail} onResetAll={() => setConfirmState({ type: "resetAll" })} />
+        )}
+        {showApp && !dataLoading && view === "main" && mainTab === "profile" && (
+          <ProfileView profile={profile} onSignOut={handleSignOut} onGoAdmin={openAdminPanel} />
+        )}
+        {showApp && !dataLoading && view === "main" && <TabBar active={mainTab} onChange={setMainTab} />}
+
+        {showApp && view === "detail" && selectedGarden && (
+          <GardenDetailView garden={selectedGarden} crop={CROP_BY_KEY[selectedGarden.crop]} category={CATEGORIES.find((c) => c.key === selectedGarden.category)} logs={selectedGardenLogs} logTypeFilter={logTypeFilter} setLogTypeFilter={setLogTypeFilter}
+            onBack={() => setView("main")} onEdit={openEditForm}
+            onDeleteGarden={() => setConfirmState({ type: "garden", gardenId: selectedGarden.id })}
+            onAddLog={() => setShowLogForm(true)}
+            onDeleteLog={(logId) => setConfirmState({ type: "log", gardenId: selectedGarden.id, logId: logId })} />
+        )}
+
+        {showApp && view === "gardenForm" && (
+          <GardenFormView key={editingGardenId || "new"} isEdit={!!editingGardenId} initialValues={gardenFormInitialValues}
+            onSave={(payload) => (editingGardenId ? handleSaveEditGarden(payload) : handleSaveNewGarden(payload, false))}
+            onSaveAndAddAnother={(payload) => handleSaveNewGarden(payload, true)}
+            onCancel={() => setView(editingGardenId ? "detail" : "main")} />
+        )}
+
+        {showApp && view === "adminUsers" && (
+          <AdminUsersView users={adminUsers} onBack={() => { setView("main"); setMainTab("profile"); }} onSelectUser={openAdminUserGardens} />
+        )}
+        {showApp && view === "adminUserGardens" && adminTargetUser && (
+          <AdminUserGardensView targetUser={adminTargetUser} gardens={adminTargetGardens} loading={adminTargetGardensLoading} onBack={() => setView("adminUsers")} onSelectGarden={openAdminGardenDetail} />
+        )}
+        {showApp && view === "adminGardenDetail" && adminTargetGarden && (
+          <GardenDetailView garden={adminTargetGarden} crop={CROP_BY_KEY[adminTargetGarden.crop]} category={CATEGORIES.find((c) => c.key === adminTargetGarden.category)} logs={adminTargetGardenLogs} logTypeFilter={logTypeFilter} setLogTypeFilter={setLogTypeFilter}
+            onBack={() => setView("adminUserGardens")} readOnly ownerLabel={adminTargetUser ? adminTargetUser.email : ""} />
+        )}
+
+        {showApp && showLogForm && <LogFormSheet onCancel={() => setShowLogForm(false)} onSave={handleAddLog} />}
+
+        {showApp && confirmState && confirmState.type === "garden" && (
+          <ConfirmDialog title="Bahçeyi sil" message="Bu bahçeyi ve tüm kayıtlarını silmek istediğinize emin misiniz? Bu işlem geri alınamaz." confirmLabel="Sil" danger onConfirm={() => handleDeleteGardenConfirmed(confirmState.gardenId)} onCancel={() => setConfirmState(null)} />
+        )}
+        {showApp && confirmState && confirmState.type === "log" && (
+          <ConfirmDialog title="Kaydı sil" message="Bu kaydı silmek istediğinize emin misiniz?" confirmLabel="Sil" danger onConfirm={() => handleDeleteLogEntry(confirmState.gardenId, confirmState.logId)} onCancel={() => setConfirmState(null)} />
+        )}
+        {showApp && confirmState && confirmState.type === "resetAll" && (
+          <ConfirmDialog title="Tüm bahçeleri sil" message="Tüm bahçeleriniz ve kayıtları kalıcı olarak silinecek. Bu işlem geri alınamaz." confirmLabel="Sıfırla" danger onConfirm={handleResetAllConfirmed} onCancel={() => setConfirmState(null)} />
+        )}
+      </div>
+    </div>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById("root"));
+root.render(<App />);
+</script>
+</body>
+</html>
